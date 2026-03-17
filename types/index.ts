@@ -7,8 +7,11 @@ export interface VideoRef {
   cover?: string
 }
 
-export interface Session {
+export interface Thread {
   id: string
-  title: string
-  createdAt: number
+  title?: string
+  resourceId: string
+  createdAt: string
+  updatedAt: string
+  metadata?: Record<string, unknown>
 }

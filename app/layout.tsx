@@ -1,7 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import "katex/dist/katex.min.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,13 +17,20 @@ export const metadata: Metadata = {
   description: "基于一数B站视频知识库的数学问答系统",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

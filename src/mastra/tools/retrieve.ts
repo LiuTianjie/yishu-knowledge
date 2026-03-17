@@ -43,7 +43,7 @@ export const retrieveTool = createTool({
     if (!output || !output.hits) return output
     return {
       hits: output.hits.map((h) => {
-        const { text, ...rest } = h
+        const { text: _text, ...rest } = h
         return rest
       }),
     }

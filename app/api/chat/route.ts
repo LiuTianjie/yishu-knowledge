@@ -53,8 +53,16 @@ export async function POST(req: NextRequest) {
 
   // 清理 params 中的非标准字段
   delete params.image_b64
+
+  // 将 threadId/resourceId 转换为 Mastra memory 格式
+  const threadId = params.threadId
+  const resourceId = params.resourceId || "default-user"
   delete params.threadId
   delete params.resourceId
+
+  if (threadId) {
+    params.memory = { thread: threadId, resource: resourceId }
+  }
 
   const stream = await handleChatStream({
     mastra,

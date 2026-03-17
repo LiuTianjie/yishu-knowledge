@@ -25,8 +25,8 @@ export default function VideoCard({ merged }: { merged: MergedVideoRef }) {
   const embedUrl = `//player.bilibili.com/player.html?bvid=${merged.bvid}&t=${firstClip.start}&autoplay=0&high_quality=1`
 
   return (
-    <div className="w-52 shrink-0 rounded-xl border border-blue-100 bg-white overflow-hidden shadow-sm">
-      {/* 嵌入视频 */}
+    <div className="w-52 shrink-0 rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      {/* Embedded video */}
       <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
         <iframe
           src={embedUrl}
@@ -37,9 +37,11 @@ export default function VideoCard({ merged }: { merged: MergedVideoRef }) {
         />
       </div>
 
-      {/* 标题 + 时间点 */}
-      <div className="p-2">
-        <p className="text-xs text-gray-700 font-medium line-clamp-2 leading-snug mb-1.5">{merged.title}</p>
+      {/* Title + timestamps */}
+      <div className="p-2.5">
+        <p className="text-xs text-gray-700 font-medium line-clamp-2 leading-snug mb-2">
+          {merged.title}
+        </p>
         <div className="flex flex-wrap gap-1">
           {merged.clips.map((clip) => (
             <a
@@ -47,7 +49,7 @@ export default function VideoCard({ merged }: { merged: MergedVideoRef }) {
               href={clip.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs bg-blue-50 border border-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-mono hover:bg-blue-500 hover:text-white transition-colors"
+              className="text-xs bg-blue-50 border border-blue-100 text-blue-600 px-1.5 py-0.5 rounded-md font-mono hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-colors"
             >
               {clip.start_str} ↗
             </a>
