@@ -1,5 +1,5 @@
 "use client"
-import { memo, useState } from "react"
+import { memo, useEffect, useState } from "react"
 import type { VideoRef } from "@/types"
 import type { UIMessage, ChatStatus } from "ai"
 import { isToolUIPart, getToolName } from "ai"
@@ -47,7 +47,27 @@ function ChatMessage({
   onRetry?: (messageId: string) => void
 }) {
   const [copied, setCopied] = useState(false)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const isUser = message.role === "user"
+
+  useEffect(() => {
+    if (!isPreviewOpen) return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsPreviewOpen(false)
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    document.addEventListener("keydown", onKeyDown)
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isPreviewOpen])
 
   // Gather all text parts
   let textContent = ""
@@ -59,22 +79,55 @@ function ChatMessage({
   if (isUser) {
     const displayText = textContent === "（图片题目）" ? "" : textContent
     return (
-      <div className="flex justify-end group">
-        <div className="flex flex-col gap-2 max-w-[85%] md:max-w-[75%] items-end min-w-0">
-          {imageUrl && (
+      <>
+        <div className="flex justify-end group">
+          <div className="flex flex-col gap-2 max-w-[85%] md:max-w-[75%] items-end min-w-0">
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(true)}
+                className="rounded-[20px] overflow-hidden border border-gray-100 shadow-sm cursor-zoom-in"
+                title="点击预览"
+                aria-label="预览图片"
+              >
+                <img
+                  src={imageUrl}
+                  alt="题目图片"
+                  className="max-w-xs md:max-w-sm"
+                />
+              </button>
+            )}
+            {displayText && (
+              <div className="px-5 py-3.5 rounded-[20px] rounded-tr-[4px] bg-[var(--brand)] text-white shadow-[var(--shadow-soft)] break-words whitespace-pre-wrap text-[15px] leading-[2]">
+                {displayText}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isPreviewOpen && imageUrl && (
+          <div
+            className="fixed inset-0 z-[80] bg-black/72 backdrop-blur-[1px] flex items-center justify-center p-4"
+            onClick={() => setIsPreviewOpen(false)}
+          >
             <img
               src={imageUrl}
-              alt="题目图片"
-              className="max-w-xs md:max-w-sm rounded-[20px] border border-gray-100 shadow-sm"
+              alt="题目预览"
+              className="max-w-[95vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
             />
-          )}
-          {displayText && (
-            <div className="px-5 py-3.5 rounded-[20px] rounded-tr-[4px] bg-[#2B6EF6] text-white shadow-sm break-words whitespace-pre-wrap text-[15px] leading-[2]">
-              {displayText}
-            </div>
-          )}
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={() => setIsPreviewOpen(false)}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors"
+              title="关闭预览"
+              aria-label="关闭预览"
+            >
+              ×
+            </button>
+          </div>
+        )}
+      </>
     )
   }
 
@@ -164,7 +217,7 @@ function ChatMessage({
   const steps = [
     { label: "分析题目", state: analyzeState, detail: analyzeDetail, output: analyzeOutput },
     ...(showRetrieveStep ? [{ label: "检索知识库", state: retrieveState, detail: undefined, output: retrieveOutput }] : []),
-    { label: "生成回答", state: answerState, detail: undefined, output: undefined },
+    { label: "正在思考", state: answerState, detail: undefined, output: undefined },
   ]
 
   // Build a map from question_index to its results
@@ -203,7 +256,7 @@ function ChatMessage({
 
         {/* Main text content */}
         {textAccumulator && (
-          <div className="px-5 py-0 rounded-[20px] rounded-tl-[4px] bg-white text-[15px] leading-[2] text-gray-800 min-w-0 w-full overflow-x-auto hide-scrollbar shadow-[0_1px_0_rgba(15,23,42,0.03)]">
+          <div className="px-5 py-3.5 rounded-[20px] rounded-tl-[4px] border border-[var(--line-soft)] bg-white text-[15px] leading-[2] text-gray-800 min-w-0 w-full overflow-x-auto hide-scrollbar shadow-[var(--shadow-soft)]">
             {useFastStreamingRender ? (
               <div className="whitespace-pre-wrap break-words leading-[2]">{textAccumulator}</div>
             ) : sections.length > 0 ? (
@@ -252,58 +305,63 @@ function ChatMessage({
           )
         })()}
 
-        {/* Usage stats */}
-        {showExtras && meta && (meta.usage || meta.durationMs) && (
-          <div className="flex items-center gap-3 text-[11px] text-gray-300 px-1">
-            {meta.usage?.totalTokens != null && (
-              <span>tokens: {meta.usage.totalTokens}</span>
-            )}
-            {meta.durationMs != null && (
-              <span>耗时: {(meta.durationMs / 1000).toFixed(1)}s</span>
-            )}
-          </div>
-        )}
-
-        {(canCopy || canRetry) && (
-          <div className="px-1 pt-1">
-            <div className="inline-flex items-center gap-0.5 rounded-full border border-slate-200/70 bg-white/90 px-1 py-1 text-slate-500 shadow-sm opacity-70 group-hover:opacity-100 transition-all">
-            {canCopy && (
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                title={copied ? "已复制" : "复制"}
-                aria-label={copied ? "已复制" : "复制"}
-              >
-                {copied ? (
-                  <svg className="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
-                    <rect x="9" y="9" width="10" height="10" rx="2" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 15H6a2 2 0 01-2-2V6a2 2 0 012-2h7a2 2 0 012 2v1" />
-                  </svg>
+        {(showExtras && meta && (meta.usage || meta.durationMs)) || canCopy || canRetry ? (
+          <div className="w-full px-1 pt-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--line-soft)] bg-white px-2 py-1 text-[var(--text-muted)] opacity-85 group-hover:opacity-100 transition-all">
+              <div className="flex items-center gap-2.5 text-[11px] text-slate-400 pr-1">
+                {showExtras && meta?.usage?.totalTokens != null && (
+                  <span>tokens: {meta.usage.totalTokens}</span>
                 )}
-              </button>
-            )}
-            {canRetry && onRetry && (
-              <button
-                type="button"
-                onClick={() => onRetry(message.id)}
-                className="w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                title="重试"
-                aria-label="重试"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 109-9" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4v8h8" />
-                </svg>
-              </button>
-            )}
+                {showExtras && meta?.durationMs != null && (
+                  <span>耗时: {(meta.durationMs / 1000).toFixed(1)}s</span>
+                )}
+              </div>
+
+              {(showExtras && meta?.usage?.totalTokens != null) || (showExtras && meta?.durationMs != null) ? (
+                <span className="w-px h-3 bg-[var(--line-soft)]" />
+              ) : null}
+
+              {(canCopy || canRetry) && (
+                <div className="inline-flex items-center gap-0.5">
+                {canCopy && (
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-[var(--surface-soft)] hover:text-slate-700 transition-colors"
+                    title={copied ? "已复制" : "复制"}
+                    aria-label={copied ? "已复制" : "复制"}
+                  >
+                    {copied ? (
+                      <svg className="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+                        <rect x="9" y="9" width="10" height="10" rx="2" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 15H6a2 2 0 01-2-2V6a2 2 0 012-2h7a2 2 0 012 2v1" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+                {canRetry && onRetry && (
+                  <button
+                    type="button"
+                    onClick={() => onRetry(message.id)}
+                    className="w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-[var(--surface-soft)] hover:text-slate-700 transition-colors"
+                    title="重试"
+                    aria-label="重试"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 109-9" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4v8h8" />
+                    </svg>
+                  </button>
+                )}
+                </div>
+              )}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Thinking: active but nothing received yet (no tool parts) */}
         {isActive && !hasAnyContent && (
@@ -322,13 +380,13 @@ function QuestionExtras({ kps, hits }: { kps: string[]; hits: VideoRef[] }) {
   const uniqueKps = Array.from(new Set(kps))
   if (uniqueKps.length === 0 && hits.length === 0) return null
   return (
-    <div className="mt-2.5 mb-1.5 pt-2.5 border-t border-[#E8EDF6] w-full overflow-hidden">
+    <div className="mt-2.5 mb-1.5 pt-2.5 border-t border-[var(--line-soft)] w-full overflow-hidden">
       {uniqueKps.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {uniqueKps.map((kp, i) => (
             <span
               key={i}
-              className="text-[13px] bg-[#EFF4FF] text-[#315FBD] border border-[#DAE7FF] px-2.5 py-1 rounded-lg font-medium"
+              className="text-[13px] bg-[var(--brand-soft)] text-[#315FBD] border border-[var(--line-soft)] px-2.5 py-1 rounded-lg font-medium"
             >
               {kp}
             </span>
@@ -338,7 +396,7 @@ function QuestionExtras({ kps, hits }: { kps: string[]; hits: VideoRef[] }) {
       {hits.length > 0 && (
         <div className="w-full">
           <p className="text-[13px] text-slate-500 font-medium mb-2.5 flex items-center gap-1.5">
-            <svg className="w-4 h-4 text-[#5B86E5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-4 h-4 text-[var(--brand)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14m-9 4h7a2 2 0 002-2V8a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             相关知识点

@@ -24,14 +24,14 @@ const Spinner = () => (
 function StepDot({ state }: { state: StepState }) {
   if (state === "done") {
     return (
-      <span className="w-4 h-4 rounded-full bg-[#2196f3] text-white flex items-center justify-center shadow-[0_0_0_2px_rgba(148,163,184,0.16)]">
+      <span className="w-4 h-4 rounded-full bg-[var(--brand)] text-white flex items-center justify-center shadow-[0_0_0_2px_rgba(148,163,184,0.16)]">
         <CheckIcon />
       </span>
     )
   }
   if (state === "active") {
     return (
-      <span className="w-4 h-4 rounded-full bg-[#2B6EF6] text-white flex items-center justify-center shadow-[0_0_0_2px_rgba(43,110,246,0.12)]">
+      <span className="w-4 h-4 rounded-full bg-[var(--brand)] text-white flex items-center justify-center shadow-[0_0_0_2px_rgba(43,110,246,0.12)]">
         <Spinner />
       </span>
     )
@@ -41,7 +41,7 @@ function StepDot({ state }: { state: StepState }) {
       <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold">!</span>
     )
   }
- return null
+  return null
 }
 
 export function StepBar({ steps }: { steps: Step[] }) {
@@ -51,7 +51,7 @@ export function StepBar({ steps }: { steps: Step[] }) {
     <div className="w-full mb-1">
       <div className="px-1.5 py-1.5 relative">
         {steps.length > 1 && (
-          <span className="absolute left-[8px] top-[18px] bottom-[12px] w-px bg-[#D7E0F0]" />
+          <span className="absolute left-[8px] top-[18px] bottom-[12px] w-px bg-[var(--line-soft)]" />
         )}
         {steps.map((step, i) => {
           const isExpanded = expandedIdx === i
@@ -64,7 +64,7 @@ export function StepBar({ steps }: { steps: Step[] }) {
 
               <button
                 onClick={() => canExpand && setExpandedIdx(isExpanded ? null : i)}
-                className={`w-full text-left rounded-md px-1 py-0.5 transition-colors ${canExpand ? "cursor-pointer hover:bg-[#F5F8FF]" : "cursor-default"}`}
+                className={`w-full text-left rounded-md px-1 py-0.5 transition-colors ${canExpand ? "cursor-pointer hover:bg-[var(--surface-soft)]" : "cursor-default"}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span
@@ -72,7 +72,7 @@ export function StepBar({ steps }: { steps: Step[] }) {
                       step.state === "done"
                         ? "text-slate-500"
                         : step.state === "active"
-                          ? "text-[#2B6EF6] font-medium"
+                          ? "text-[var(--brand)] font-medium"
                           : step.state === "error"
                             ? "text-red-500"
                             : "text-slate-500"
@@ -90,7 +90,7 @@ export function StepBar({ steps }: { steps: Step[] }) {
               </button>
 
               {isExpanded && step.output && (
-                <div className="mt-1.5 rounded-md border border-[#E1E8F6] bg-[#F7FAFF] px-2 py-1.5">
+                <div className="mt-1.5 rounded-md border border-[var(--line-soft)] bg-[var(--surface-soft)] px-2 py-1.5">
                   <pre className="text-[11px] text-gray-600 whitespace-pre-wrap break-all font-mono leading-5 max-h-44 overflow-y-auto hide-scrollbar">
                     {JSON.stringify(step.output, null, 2)}
                   </pre>

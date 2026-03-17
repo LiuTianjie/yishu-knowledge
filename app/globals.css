@@ -8,6 +8,13 @@
   --sidebar-fg: #18181b;
   --accent: #2563eb;
   --accent-light: #60a5fa;
+  --brand: #2b6ef6;
+  --brand-soft: #edf4ff;
+  --surface-soft: #f7faff;
+  --line-soft: #e3ebf8;
+  --line-strong: #cedcf5;
+  --text-muted: #64748b;
+  --shadow-soft: 0 1px 0 rgba(15, 23, 42, 0.03), 0 6px 20px rgba(15, 23, 42, 0.04);
 }
 
 @theme inline {

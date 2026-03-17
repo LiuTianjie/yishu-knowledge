@@ -61,12 +61,12 @@ export default function ChatInput({
           </div>
         )}
 
-        <div className="flex items-end gap-2 bg-[#F4F4F5] rounded-[24px] p-1.5 md:p-2 border border-black/5 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500/30 transition-all">
+        <div className="flex items-end gap-2 bg-[var(--surface-soft)] rounded-[24px] p-1.5 md:p-2 border border-[var(--line-soft)] shadow-[var(--shadow-soft)] focus-within:ring-2 focus-within:ring-[color:var(--brand)]/20 focus-within:border-[var(--line-strong)] transition-all">
           {/* Upload button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-10 h-10 flex items-center justify-center rounded-[18px] text-gray-500 hover:text-blue-600 hover:bg-white transition-colors shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-[18px] text-[var(--text-muted)] hover:text-[var(--brand)] hover:bg-white transition-colors shrink-0"
             title="上传题目图片"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -101,7 +101,7 @@ export default function ChatInput({
             className={`w-10 h-10 flex items-center justify-center rounded-[18px] text-white transition-all shrink-0 shadow-sm ${
               isLoading
                 ? "bg-red-500 hover:bg-red-600"
-                : "bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
+                : "bg-[var(--brand)] hover:brightness-95 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed"
             }`}
             title={isLoading ? "停止" : "发送"}
           >

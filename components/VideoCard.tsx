@@ -27,9 +27,9 @@ export default function VideoCard({ merged }: { merged: MergedVideoRef }) {
   const extraCount = Math.max(merged.clips.length - clipPreview.length, 0)
 
   return (
-    <div className="w-[232px] h-[190px] shrink-0 rounded-[16px] border border-[#DDE7FB] bg-white overflow-hidden shadow-sm hover:shadow-md hover:border-[#C9D9FB] transition-all group/card flex flex-col">
+    <div className="w-[248px] h-[200px] shrink-0 rounded-[16px] border border-[var(--line-soft)] bg-white overflow-hidden shadow-[var(--shadow-soft)] hover:border-[var(--line-strong)] transition-all group/card flex flex-col">
       {/* Embedded video */}
-      <div className="relative w-full h-[100px] bg-[#F3F7FF] shrink-0">
+      <div className="relative block w-full h-[112px] bg-[var(--surface-soft)] shrink-0">
         <iframe
           src={embedUrl}
           className="absolute inset-0 w-full h-full"
@@ -41,7 +41,7 @@ export default function VideoCard({ merged }: { merged: MergedVideoRef }) {
 
       {/* Title + timestamps */}
       <div className="p-3 flex-1 flex flex-col min-h-0">
-        <p className="h-11 text-[13px] text-gray-800 font-semibold line-clamp-2 leading-snug mb-2.5 group-hover/card:text-[#2B6EF6] transition-colors">
+        <p className="h-11 text-[13px] text-gray-800 font-semibold line-clamp-2 leading-snug mb-2.5 group-hover/card:text-[var(--brand)] transition-colors" title={merged.title}>
           {merged.title}
         </p>
         <div className="mt-auto flex items-center gap-1.5 overflow-x-auto hide-scrollbar whitespace-nowrap">
@@ -51,7 +51,7 @@ export default function VideoCard({ merged }: { merged: MergedVideoRef }) {
               href={clip.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] bg-[#EDF3FF] text-[#355EB0] px-2 py-1 rounded-md font-mono font-semibold hover:bg-[#2B6EF6] hover:text-white transition-colors"
+              className="text-[11px] bg-[var(--brand-soft)] text-[#355EB0] px-2 py-1 rounded-md font-mono font-semibold hover:bg-[var(--brand)] hover:text-white transition-colors"
             >
               {clip.start_str} ↗
             </a>
