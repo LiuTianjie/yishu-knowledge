@@ -27,9 +27,9 @@ export default function VideoCard({ merged }: { merged: MergedVideoRef }) {
   const extraCount = Math.max(merged.clips.length - clipPreview.length, 0)
 
   return (
-    <div className="w-[248px] h-[200px] shrink-0 rounded-[16px] border border-[var(--line-soft)] bg-white overflow-hidden shadow-[var(--shadow-soft)] hover:border-[var(--line-strong)] transition-all group/card flex flex-col">
+    <div className="w-[248px] h-[210px] shrink-0 rounded-[16px] border border-[var(--line-soft)] bg-white overflow-hidden shadow-[var(--shadow-soft)] hover:border-[var(--line-strong)] transition-all group/card flex flex-col">
       {/* Embedded video */}
-      <div className="relative block w-full h-[112px] bg-[var(--surface-soft)] shrink-0">
+      <div className="relative block w-full h-[110px] bg-[var(--surface-soft)] shrink-0">
         <iframe
           src={embedUrl}
           className="absolute inset-0 w-full h-full"
