@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
+import type { UIMessage } from "ai"
 import ChatMessage from "./ChatMessage"
 import ChatInput from "./ChatInput"
 import EmptyState from "./EmptyState"
@@ -12,13 +13,11 @@ const pendingImage = { b64: "", preview: "" }
 
 interface ChatPanelProps {
   activeId: string
-  resourceId: string
   onUpdateTitle: (title: string) => void
 }
 
 export default function ChatPanel({
   activeId,
-  resourceId,
   onUpdateTitle,
 }: ChatPanelProps) {
   const [input, setInput] = useState("")
@@ -31,10 +30,6 @@ export default function ChatPanel({
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        body: {
-          threadId: activeId,
-          resourceId,
-        },
         prepareSendMessagesRequest: ({ body, messages, id, trigger, messageId }) => {
           const fullBody: Record<string, unknown> = {
             ...(body || {}),
@@ -53,9 +48,43 @@ export default function ChatPanel({
       })
   )
 
-  const { messages, sendMessage, status, stop, error } = useChat({ transport })
+  const { messages, sendMessage, status, stop, error, setMessages } = useChat({
+    transport,
+  })
 
   const isLoading = status === "submitted" || status === "streaming"
+  const [messagesLoaded, setMessagesLoaded] = useState(false)
+
+  // Load saved messages on mount
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/threads/${activeId}/messages`)
+      .then(r => r.json())
+      .then((saved: UIMessage[]) => {
+        if (!cancelled && saved.length > 0) setMessages(saved)
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setMessagesLoaded(true) })
+    return () => { cancelled = true }
+  }, [activeId, setMessages])
+
+  // Save messages when streaming completes
+  const prevStatusRef = useRef(status)
+  useEffect(() => {
+    const prev = prevStatusRef.current
+    prevStatusRef.current = status
+    if (
+      (prev === "streaming" || prev === "submitted") &&
+      status === "ready" &&
+      messages.length > 0
+    ) {
+      fetch(`/api/threads/${activeId}/messages`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+      }).catch(() => {})
+    }
+  }, [status, messages, activeId])
 
   // Auto-scroll when near bottom
   useEffect(() => {
@@ -63,7 +92,7 @@ export default function ChatPanel({
     if (!el) return
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
     if (distFromBottom < 150) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+      bottomRef.current?.scrollIntoView({ behavior: status === "streaming" ? "auto" : "smooth" })
     }
   }, [messages, status])
 
@@ -101,46 +130,43 @@ export default function ChatPanel({
   return (
     <>
       {/* Messages area */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative bg-white">
         <div
           ref={scrollContainerRef}
-          className="absolute inset-0 overflow-y-auto"
+          className="absolute inset-0 overflow-y-auto overflow-x-hidden hide-scrollbar"
         >
-          <div className="max-w-3xl mx-auto w-full px-4 py-6 flex flex-col gap-6">
-            {messages.length === 0 && (
+          <div className="max-w-3xl mx-auto w-full md:px-6 px-3 py-6 flex flex-col gap-6 pb-8">
+            {messagesLoaded && messages.length === 0 && (
               <EmptyState onSelect={(q) => setInput(q)} />
             )}
 
             {messages.map((msg, idx) => (
-              <ChatMessage
+              <div
                 key={msg.id}
-                message={msg}
-                chatStatus={status}
-                isLastMessage={idx === messages.length - 1}
-                imageUrl={
-                  msg.role === "user"
-                    ? getImageByPosition(idx)
-                    : undefined
-                }
-              />
+                className="pb-5 mb-5 border-b border-gray-200/70 last:border-b-0 last:mb-0 last:pb-0"
+              >
+                <ChatMessage
+                  message={msg}
+                  chatStatus={status}
+                  isLastMessage={idx === messages.length - 1}
+                  imageUrl={
+                    msg.role === "user"
+                      ? getImageByPosition(idx)
+                      : undefined
+                  }
+                />
+              </div>
             ))}
 
             {/* Thinking placeholder: shown when submitted but no assistant message yet */}
             {status === "submitted" &&
               messages.length > 0 &&
               messages[messages.length - 1].role !== "assistant" && (
-                <div className="flex gap-3 animate-fade-in">
-                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
-                    <img
-                      src="/avatar.jpg"
-                      alt="AI"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl rounded-tl-md bg-white border border-gray-100 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce [animation-delay:0ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce [animation-delay:150ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce [animation-delay:300ms]" />
+                <div className="flex animate-fade-in">
+                  <div className="flex items-center gap-1.5 px-4 py-3 rounded-[20px] rounded-tl-md bg-gray-50 border border-gray-100 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:300ms]" />
                   </div>
                 </div>
               )}

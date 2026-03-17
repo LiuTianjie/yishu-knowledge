@@ -19,9 +19,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
-      "@/mastra": ["./src/mastra"],
-      "@/mastra/*": ["./src/mastra/*"]
+      "@/*": ["./*"]
     }
   },
   "include": [
