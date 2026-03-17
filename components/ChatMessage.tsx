@@ -213,11 +213,23 @@ function ChatMessage({
   const isMath = analyzeOutput?.is_math !== false
   const showRetrieveStep = hasRetrieveStep || (analyzeState !== "done") || isMath
 
+  // AI SDK stream may terminate unexpectedly (abort/network/error), leaving stale pending/active states.
+  // Once the message is settled, coerce unfinished tool steps to error to avoid dangling "进行中".
+  const isMessageSettled = !isActive && (!isLastMessage || chatStatus === "ready" || chatStatus === "error")
+  const finalizeStepState = (state: StepState): StepState => {
+    if (!isMessageSettled) return state
+    return state === "pending" || state === "active" ? "error" : state
+  }
+
+  analyzeState = finalizeStepState(analyzeState)
+  retrieveState = finalizeStepState(retrieveState)
+  answerState = finalizeStepState(answerState)
+
   // Build steps array
   const steps = [
     { label: "分析题目", state: analyzeState, detail: analyzeDetail, output: analyzeOutput },
     ...(showRetrieveStep ? [{ label: "检索知识库", state: retrieveState, detail: undefined, output: retrieveOutput }] : []),
-    { label: "正在思考", state: answerState, detail: undefined, output: undefined },
+    { label: "解答问题", state: answerState, detail: undefined, output: undefined },
   ]
 
   // Build a map from question_index to its results
@@ -230,8 +242,8 @@ function ChatMessage({
   const showExtras = !isActive // only show knowledge points + videos after streaming ends
   const { before, sections } = splitByQuestion(textAccumulator)
   const useFastStreamingRender = isActive && hasStreamingText
-  const canCopy = Boolean(textAccumulator.trim())
-  const canRetry = message.role === "assistant" && !isActive
+  const canCopy = isMessageSettled && Boolean(textAccumulator.trim())
+  const canRetry = isMessageSettled && message.role === "assistant"
 
   const handleCopy = async () => {
     if (!canCopy) return

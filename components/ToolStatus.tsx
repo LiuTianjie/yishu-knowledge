@@ -46,14 +46,17 @@ function StepDot({ state }: { state: StepState }) {
 
 export function StepBar({ steps }: { steps: Step[] }) {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
+  const visibleSteps = steps.filter((step) => step.state !== "pending")
+
+  if (visibleSteps.length === 0) return null
 
   return (
     <div className="w-full mb-1">
       <div className="px-1.5 py-1.5 relative">
-        {steps.length > 1 && (
+        {visibleSteps.length > 1 && (
           <span className="absolute left-[8px] top-[18px] bottom-[12px] w-px bg-[var(--line-soft)]" />
         )}
-        {steps.map((step, i) => {
+        {visibleSteps.map((step, i) => {
           const isExpanded = expandedIdx === i
           const canExpand = Boolean(step.output)
           return (
