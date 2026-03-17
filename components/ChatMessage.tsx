@@ -1,5 +1,5 @@
 "use client"
-import { memo } from "react"
+import { memo, useState } from "react"
 import type { VideoRef } from "@/types"
 import type { UIMessage, ChatStatus } from "ai"
 import { isToolUIPart, getToolName } from "ai"
@@ -38,12 +38,15 @@ function ChatMessage({
   chatStatus,
   isLastMessage,
   imageUrl,
+  onRetry,
 }: {
   message: UIMessage
   chatStatus: ChatStatus
   isLastMessage: boolean
   imageUrl?: string
+  onRetry?: (messageId: string) => void
 }) {
+  const [copied, setCopied] = useState(false)
   const isUser = message.role === "user"
 
   // Gather all text parts
@@ -174,6 +177,19 @@ function ChatMessage({
   const showExtras = !isActive // only show knowledge points + videos after streaming ends
   const { before, sections } = splitByQuestion(textAccumulator)
   const useFastStreamingRender = isActive && hasStreamingText
+  const canCopy = Boolean(textAccumulator.trim())
+  const canRetry = message.role === "assistant" && !isActive
+
+  const handleCopy = async () => {
+    if (!canCopy) return
+    try {
+      await navigator.clipboard.writeText(textAccumulator)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1200)
+    } catch {
+      // Ignore clipboard errors in unsupported environments.
+    }
+  }
 
   // Usage metadata
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -187,7 +203,7 @@ function ChatMessage({
 
         {/* Main text content */}
         {textAccumulator && (
-          <div className="px-5 py-3.5 rounded-[20px] rounded-tl-[4px] bg-white text-[15px] leading-[2] text-gray-800 min-w-0 w-full overflow-x-auto hide-scrollbar shadow-[0_1px_0_rgba(15,23,42,0.03)]">
+          <div className="px-5 py-0 rounded-[20px] rounded-tl-[4px] bg-white text-[15px] leading-[2] text-gray-800 min-w-0 w-full overflow-x-auto hide-scrollbar shadow-[0_1px_0_rgba(15,23,42,0.03)]">
             {useFastStreamingRender ? (
               <div className="whitespace-pre-wrap break-words leading-[2]">{textAccumulator}</div>
             ) : sections.length > 0 ? (
@@ -245,6 +261,47 @@ function ChatMessage({
             {meta.durationMs != null && (
               <span>耗时: {(meta.durationMs / 1000).toFixed(1)}s</span>
             )}
+          </div>
+        )}
+
+        {(canCopy || canRetry) && (
+          <div className="px-1 pt-1">
+            <div className="inline-flex items-center gap-0.5 rounded-full border border-slate-200/70 bg-white/90 px-1 py-1 text-slate-500 shadow-sm opacity-70 group-hover:opacity-100 transition-all">
+            {canCopy && (
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                title={copied ? "已复制" : "复制"}
+                aria-label={copied ? "已复制" : "复制"}
+              >
+                {copied ? (
+                  <svg className="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+                    <rect x="9" y="9" width="10" height="10" rx="2" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 15H6a2 2 0 01-2-2V6a2 2 0 012-2h7a2 2 0 012 2v1" />
+                  </svg>
+                )}
+              </button>
+            )}
+            {canRetry && onRetry && (
+              <button
+                type="button"
+                onClick={() => onRetry(message.id)}
+                className="w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                title="重试"
+                aria-label="重试"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 109-9" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4v8h8" />
+                </svg>
+              </button>
+            )}
+            </div>
           </div>
         )}
 

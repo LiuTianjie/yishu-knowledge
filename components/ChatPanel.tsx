@@ -16,6 +16,49 @@ interface ChatPanelProps {
   onUpdateTitle: (title: string) => void
 }
 
+function getMessageImageUrl(msg: UIMessage): string {
+  const meta = (msg as { metadata?: unknown }).metadata
+  if (!meta || typeof meta !== "object") return ""
+  const imageUrl = (meta as { imageUrl?: unknown }).imageUrl
+  return typeof imageUrl === "string" ? imageUrl : ""
+}
+
+function withPersistedImageMeta(messages: UIMessage, imageUrl: string): UIMessage
+function withPersistedImageMeta(messages: UIMessage[], imageUrlByUserOrder: string[]): UIMessage[]
+function withPersistedImageMeta(
+  messages: UIMessage | UIMessage[],
+  imageUrlOrList: string | string[],
+): UIMessage | UIMessage[] {
+  if (!Array.isArray(messages)) {
+    const imageUrl = typeof imageUrlOrList === "string" ? imageUrlOrList : ""
+    if (!imageUrl) return messages
+    const meta = (messages as { metadata?: Record<string, unknown> }).metadata || {}
+    return {
+      ...messages,
+      metadata: { ...meta, imageUrl },
+    }
+  }
+
+  const imageUrlByUserOrder = Array.isArray(imageUrlOrList) ? imageUrlOrList : []
+  let userIndex = 0
+  return messages.map((msg) => {
+    if (msg.role !== "user") return msg
+
+    const existing = getMessageImageUrl(msg)
+    const fallback = imageUrlByUserOrder[userIndex] || ""
+    userIndex++
+
+    const imageUrl = existing || fallback
+    if (!imageUrl) return msg
+
+    const meta = (msg as { metadata?: Record<string, unknown> }).metadata || {}
+    return {
+      ...msg,
+      metadata: { ...meta, imageUrl },
+    }
+  })
+}
+
 export default function ChatPanel({
   activeId,
   onUpdateTitle,
@@ -48,7 +91,7 @@ export default function ChatPanel({
       })
   )
 
-  const { messages, sendMessage, status, stop, error, setMessages } = useChat({
+  const { messages, sendMessage, regenerate, status, stop, error, setMessages } = useChat({
     transport,
   })
 
@@ -58,10 +101,22 @@ export default function ChatPanel({
   // Load saved messages on mount
   useEffect(() => {
     let cancelled = false
+    setUserMsgImages([])
     fetch(`/api/threads/${activeId}/messages`)
       .then(r => r.json())
       .then((saved: UIMessage[]) => {
-        if (!cancelled && saved.length > 0) setMessages(saved)
+        if (cancelled) return
+        if (saved.length > 0) {
+          const persisted = saved.map((msg) => {
+            const imageUrl = getMessageImageUrl(msg)
+            return imageUrl ? withPersistedImageMeta(msg, imageUrl) as UIMessage : msg
+          })
+          const restoredImages = persisted
+            .filter((msg) => msg.role === "user")
+            .map((msg) => getMessageImageUrl(msg))
+          setUserMsgImages(restoredImages)
+          setMessages(persisted)
+        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setMessagesLoaded(true) })
@@ -78,13 +133,14 @@ export default function ChatPanel({
       status === "ready" &&
       messages.length > 0
     ) {
+      const persistedMessages = withPersistedImageMeta(messages, userMsgImages) as UIMessage[]
       fetch(`/api/threads/${activeId}/messages`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages: persistedMessages }),
       }).catch(() => {})
     }
-  }, [status, messages, activeId])
+  }, [status, messages, activeId, userMsgImages])
 
   // Auto-scroll when near bottom
   useEffect(() => {
@@ -127,6 +183,14 @@ export default function ChatPanel({
     [messages, userMsgImages]
   )
 
+  const handleRetry = useCallback(
+    async (messageId: string) => {
+      if (isLoading) return
+      await regenerate({ messageId })
+    },
+    [isLoading, regenerate]
+  )
+
   return (
     <>
       {/* Messages area */}
@@ -149,9 +213,10 @@ export default function ChatPanel({
                   message={msg}
                   chatStatus={status}
                   isLastMessage={idx === messages.length - 1}
+                  onRetry={msg.role === "assistant" ? handleRetry : undefined}
                   imageUrl={
                     msg.role === "user"
-                      ? getImageByPosition(idx)
+                      ? getImageByPosition(idx) || getMessageImageUrl(msg)
                       : undefined
                   }
                 />

@@ -41,10 +41,7 @@ function StepDot({ state }: { state: StepState }) {
       <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold">!</span>
     )
   }
-  // pending
-  return (
-    <span className="w-4 h-4 rounded-full border-2 border-gray-200 bg-white" />
-  )
+ return null
 }
 
 export function StepBar({ steps }: { steps: Step[] }) {
