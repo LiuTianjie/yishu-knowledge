@@ -2,57 +2,39 @@ import { handleChatStream } from "@mastra/ai-sdk"
 import { createUIMessageStreamResponse } from "ai"
 import { NextRequest } from "next/server"
 import { mastra } from "@/mastra/index"
-import { volcClient } from "@/mastra/lib/volc-provider"
-
-const VISION_MODEL = process.env.VOLC_VISION_MODEL || "doubao-seed-2-0-pro-260215"
-
-async function ocrImage(image_b64: string): Promise<string> {
-  const resp = await volcClient.chat.completions.create({
-    model: VISION_MODEL,
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${image_b64}` } },
-          { type: "text", text: "请将图片中的数学题目完整转录为文字，保留所有数学符号和公式，不要解答，只转录题目内容。" },
-        ],
-      },
-    ],
-    temperature: 0,
-  })
-  return resp.choices[0].message.content?.trim() || ""
-}
+import { setAnalyzeImage } from "@/mastra/tools/analyze"
 
 export async function POST(req: NextRequest) {
   const params = await req.json()
-  const image_b64 = params.image_b64 || ""
+  const image_b64: string = params.image_b64 || ""
 
-  // 如果有图片，先 OCR 再注入到最后一条用户消息
+  // 如果有图片，注入 FileUIPart 到最后一条用户消息（模型直接看图）
   if (image_b64 && Array.isArray(params.messages) && params.messages.length > 0) {
-    try {
-      const ocrText = await ocrImage(image_b64)
-      if (ocrText) {
-        const lastMsg = params.messages[params.messages.length - 1]
-        if (lastMsg.role === "user" && Array.isArray(lastMsg.parts)) {
-          lastMsg.parts = lastMsg.parts.map((p: { type: string; text?: string }) => {
-            if (p.type === "text") {
-              const original = p.text || ""
-              const enriched = original === "（图片题目）"
-                ? `[图片识别结果]\n${ocrText}\n\n请解答以上题目`
-                : `[图片识别结果]\n${ocrText}\n\n${original}`
-              return { ...p, text: enriched }
-            }
-            return p
-          })
+    const lastMsg = params.messages[params.messages.length - 1]
+    if (lastMsg.role === "user" && Array.isArray(lastMsg.parts)) {
+      // 在文本前面插入图片 part
+      lastMsg.parts.unshift({
+        type: "file",
+        mediaType: "image/jpeg",
+        url: `data:image/jpeg;base64,${image_b64}`,
+      })
+      // 如果用户没输入文字，替换默认占位符
+      lastMsg.parts = lastMsg.parts.map(
+        (p: { type: string; text?: string }) => {
+          if (p.type === "text" && p.text === "（图片题目）") {
+            return { ...p, text: "请看图片中的题目并解答" }
+          }
+          return p
         }
-      }
-    } catch (e) {
-      console.error("OCR failed:", e)
+      )
     }
   }
 
   // 清理 params 中的非标准字段
   delete params.image_b64
+
+  // 把图片传给 analyzeTool（请求级变量，tool 执行时消费一次）
+  setAnalyzeImage(image_b64)
 
   // 将 threadId/resourceId 转换为 Mastra memory 格式
   const threadId = params.threadId
@@ -62,6 +44,26 @@ export async function POST(req: NextRequest) {
 
   if (threadId) {
     params.memory = { thread: threadId, resource: resourceId }
+  }
+
+  // 强制工具调用顺序：step0 → analyzeTool, step1 → retrieveTool (if math), step2+ → auto
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params.prepareStep = ({ stepNumber, steps }: { stepNumber: number; steps: any[] }) => {
+    if (stepNumber === 0) {
+      // 第一步必须调用 analyzeTool
+      return { toolChoice: { type: "tool" as const, toolName: "analyzeTool" } }
+    }
+    if (stepNumber === 1 && steps.length > 0) {
+      // 检查第一步 analyzeTool 是否返回 is_math: true
+      const analyzeResults = steps[0]?.toolResults || []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isMath = analyzeResults.some((r: any) => r.output?.is_math === true)
+      if (isMath) {
+        return { toolChoice: { type: "tool" as const, toolName: "retrieveTool" } }
+      }
+    }
+    // 后续步骤让模型自由生成
+    return { toolChoice: "auto" as const }
   }
 
   const stream = await handleChatStream({

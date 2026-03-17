@@ -10,10 +10,15 @@ const EMBEDDING_MODEL = process.env.VOLC_EMBEDDING_MODEL || "doubao-embedding-te
 let db: lancedb.Connection | null = null
 let table: lancedb.Table | null = null
 
-async function getTable(): Promise<lancedb.Table> {
+async function getTable(): Promise<lancedb.Table | null> {
   if (!table) {
-    db = await lancedb.connect(DB_PATH)
-    table = await db.openTable(TABLE_NAME)
+    try {
+      db = await lancedb.connect(DB_PATH)
+      table = await db.openTable(TABLE_NAME)
+    } catch (e) {
+      console.error(`LanceDB: failed to open table '${TABLE_NAME}':`, e)
+      return null
+    }
   }
   return table
 }
@@ -41,6 +46,7 @@ export async function searchVectors(
   const queryVec = resp.data[0].embedding
 
   const tbl = await getTable()
+  if (!tbl) return []
   const results = await tbl
     .query()
     .nearestTo(queryVec)

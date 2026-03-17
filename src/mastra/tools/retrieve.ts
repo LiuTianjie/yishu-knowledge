@@ -28,15 +28,20 @@ export const retrieveTool = createTool({
       return { hits: [] }
     }
 
-    const rawHits = await searchVectors(knowledge_points)
-    const covers = getCoversCache()
+    try {
+      const rawHits = await searchVectors(knowledge_points)
+      const covers = getCoversCache()
 
-    const hits = rawHits.map((h) => ({
-      ...h,
-      cover: covers[h.bvid] || "",
-    }))
+      const hits = rawHits.map((h) => ({
+        ...h,
+        cover: covers[h.bvid] || "",
+      }))
 
-    return { hits }
+      return { hits }
+    } catch (e) {
+      console.error("retrieveTool error:", e)
+      return { hits: [] }
+    }
   },
   // 给模型的精简版本，去掉冗长的字幕原文
   toModelOutput: (output) => {

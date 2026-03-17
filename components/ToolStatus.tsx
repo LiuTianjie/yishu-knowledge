@@ -1,25 +1,41 @@
 "use client"
 import { useState } from "react"
 
-const TOOL_DISPLAY: Record<string, { loading: string; done: string }> = {
-  "ocrTool": { loading: "识别图片中…", done: "图片识别完成" },
-  "ocr-image": { loading: "识别图片中…", done: "图片识别完成" },
-  "analyzeTool": { loading: "分析题目中…", done: "题目分析完成" },
-  "analyze-question": { loading: "分析题目中…", done: "题目分析完成" },
-  "retrieveTool": { loading: "检索知识点中…", done: "知识点检索完成" },
-  "retrieve-knowledge": { loading: "检索知识点中…", done: "知识点检索完成" },
+const TOOL_DISPLAY: Record<string, { streaming: string; executing: string; done: string }> = {
+  "analyzeTool": { streaming: "正在读取题目…", executing: "分析题目中…", done: "分析完成" },
+  "analyze-question": { streaming: "正在读取题目…", executing: "分析题目中…", done: "分析完成" },
+  "retrieveTool": { streaming: "准备检索…", executing: "检索知识库中…", done: "检索完成" },
+  "retrieve-knowledge": { streaming: "准备检索…", executing: "检索知识库中…", done: "检索完成" },
 }
 
+function isAnalyze(name: string) {
+  return name === "analyze-question" || name === "analyzeTool"
+}
 function isRetrieve(name: string) {
   return name === "retrieve-knowledge" || name === "retrieveTool"
 }
 
-export function ToolLoading({ toolName }: { toolName: string }) {
-  const labels = TOOL_DISPLAY[toolName] || { loading: "处理中…" }
+export function ToolLoading({ toolName, input, state }: { toolName: string; input?: unknown; state?: string }) {
+  const labels = TOOL_DISPLAY[toolName] || { streaming: "处理中…", executing: "执行中…" }
+  const isStreaming = state === "partial-call" || state === "input-streaming"
+  const statusText = isStreaming ? labels.streaming : labels.executing
+
+  // Show streaming input text for analyze tool
+  const inputText = input && typeof input === "object" && "text" in input
+    ? (input as { text: string }).text
+    : null
+
   return (
-    <div className="flex items-center gap-2 text-xs px-1 py-1">
-      <span className="w-3 h-3 border-2 border-blue-300 border-t-blue-500 rounded-full animate-spin shrink-0" />
-      <span className="text-gray-400">{labels.loading}</span>
+    <div className="border border-blue-100 rounded-lg overflow-hidden bg-blue-50/30">
+      <div className="flex items-center gap-2 text-xs px-3 py-2">
+        <span className="w-3 h-3 border-2 border-blue-300 border-t-blue-500 rounded-full animate-spin shrink-0" />
+        <span className="text-blue-600 font-medium">{statusText}</span>
+      </div>
+      {isStreaming && inputText && (
+        <div className="px-3 pb-2 -mt-0.5">
+          <p className="text-xs text-gray-500 whitespace-pre-wrap line-clamp-3 leading-relaxed">{inputText}</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -36,12 +52,14 @@ export function ToolDone({
   const labels = TOOL_DISPLAY[toolName] || { done: "完成" }
 
   const displayOutput = (() => {
+    if (isAnalyze(toolName) && output) {
+      return output
+    }
     if (isRetrieve(toolName) && output?.hits) {
       return {
-        ...output,
         hits: output.hits.map((h: Record<string, unknown>) => {
-          const { text: _text, ...rest } = h
-          return rest
+          const { text: _text, ...r } = h
+          return r
         }),
       }
     }

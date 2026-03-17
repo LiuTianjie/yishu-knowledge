@@ -53,7 +53,7 @@ export default function ChatPanel({
       })
   )
 
-  const { messages, sendMessage, status, stop } = useChat({ transport })
+  const { messages, sendMessage, status, stop, error } = useChat({ transport })
 
   const isLoading = status === "submitted" || status === "streaming"
 
@@ -115,6 +115,8 @@ export default function ChatPanel({
               <ChatMessage
                 key={msg.id}
                 message={msg}
+                chatStatus={status}
+                isLastMessage={idx === messages.length - 1}
                 imageUrl={
                   msg.role === "user"
                     ? getImageByPosition(idx)
@@ -122,6 +124,41 @@ export default function ChatPanel({
                 }
               />
             ))}
+
+            {/* Thinking placeholder: shown when submitted but no assistant message yet */}
+            {status === "submitted" &&
+              messages.length > 0 &&
+              messages[messages.length - 1].role !== "assistant" && (
+                <div className="flex gap-3 animate-fade-in">
+                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                    <img
+                      src="/avatar.jpg"
+                      alt="AI"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl rounded-tl-md bg-white border border-gray-100 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce [animation-delay:300ms]" />
+                  </div>
+                </div>
+              )}
+
+            {/* Error banner */}
+            {status === "error" && error && (
+              <div className="flex gap-3 animate-fade-in">
+                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-red-100 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="px-4 py-3 rounded-2xl rounded-tl-md bg-red-50 border border-red-200 text-sm text-red-700 max-w-md">
+                  <p className="font-medium">请求出错了</p>
+                  <p className="mt-1 text-red-500 text-xs break-all">{error.message || "未知错误，请重试"}</p>
+                </div>
+              </div>
+            )}
 
             <div ref={bottomRef} />
           </div>
