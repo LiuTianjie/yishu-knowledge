@@ -196,7 +196,40 @@ pnpm start
 
 ---
 
-## 8. 数据迁移（向量库）
+## 8. 部署到阿里云函数计算（FC）
+
+仓库根目录已提供可直接使用的 Serverless Devs 模板：`s.yaml`。
+
+### 8.1 前置条件
+
+1. 安装并配置 Serverless Devs（`s`）及阿里云凭证（`access: default`）。
+2. 已开通函数计算 FC 3.0。
+
+### 8.2 一键部署
+
+```bash
+export VOLC_API_KEY=你的真实密钥
+s deploy
+```
+
+模板遵循 FC 规范，已包含：
+
+- `runtime: custom.debian10`
+- HTTP Trigger（匿名访问）
+- `pre-deploy` 自动执行 `pnpm install` + `pnpm build`
+- 函数启动命令：`pnpm start -- --hostname 0.0.0.0 --port 9000`
+
+### 8.3 需要你修改的配置
+
+编辑 `s.yaml` 中以下字段：
+
+- `vars.region`：部署地域（如 `cn-hangzhou`）
+- `vars.service.name` / `functionName`：服务与函数名称
+- 其他模型相关环境变量可按需在 `environmentVariables` 中继续追加
+
+---
+
+## 9. 数据迁移（向量库）
 
 当 `data/chunks.jsonl` 更新后，执行：
 
@@ -208,7 +241,7 @@ npx tsx scripts/migrate-to-lancedb.ts
 
 ---
 
-## 9. 关键设计约束
+## 10. 关键设计约束
 
 1. 工具链是“可跳过但可强制”的：
 - 图片题强制 analyze。
@@ -224,7 +257,7 @@ npx tsx scripts/migrate-to-lancedb.ts
 
 ---
 
-## 10. 版本与依赖基线
+## 11. 版本与依赖基线
 
 - Next.js 16.1.6
 - React 19.2.3
