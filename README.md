@@ -225,7 +225,6 @@ s deploy
 
 - `vars.region`：部署地域（如 `cn-hangzhou`）
 - `vars.service.name` / `functionName`：服务与函数名称
-- 部署前需在终端注入环境变量：`export VOLC_API_KEY=你的真实密钥`
 - 其他模型相关环境变量可按需在 `environmentVariables` 中继续追加
 
 ---

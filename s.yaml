@@ -19,7 +19,7 @@ resources:
       region: ${vars.region}
       service: ${vars.service}
       functionName: web
-      description: Next.js 16.1.6 Web 应用
+      description: Next.js Web 应用
       runtime: custom.debian10
       timeout: 300
       cpu: 1
@@ -32,8 +32,6 @@ resources:
           - pnpm start -- --hostname 0.0.0.0 --port 9000
       environmentVariables:
         NODE_ENV: production
-        PORT: "9000"
-        HOSTNAME: 0.0.0.0
         VOLC_API_KEY: ${env(VOLC_API_KEY)}
       code: ./
       triggers:
