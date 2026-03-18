@@ -5,8 +5,7 @@ export const THREAD_AFFINITY_HEADER = "x-thread-affinity"
 export const hasExternalApiBase = Boolean(apiBaseUrl)
 
 export function getThreadAffinityKey(threadId?: string) {
-  const normalizedThreadId = threadId?.trim()
-  return normalizedThreadId || undefined
+  return threadId?.trim() || undefined
 }
 
 export function getApiUrl(path: string) {

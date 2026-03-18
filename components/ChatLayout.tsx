@@ -74,7 +74,7 @@ export default function ChatLayout() {
             </h1>
             {hasExternalApiBase && affinityKey && (
               <p className="text-[11px] text-blue-500 truncate mt-0.5">
-                后端直连 · 会话亲和键 {affinityKey.slice(0, 12)}
+                后端直连 · 会话亲和键 {affinityKey}
               </p>
             )}
           </div>
