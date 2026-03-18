@@ -1,6 +1,6 @@
 edition: 3.0.0
 name: yishu-knowledge-fc
-access: default
+access: lt
 
 vars:
   region: cn-hangzhou
@@ -15,25 +15,35 @@ resources:
       pre-deploy:
         - run: pnpm install --frozen-lockfile
         - run: pnpm build
+        - run: cp -r public .next/standalone/public
+        - run: cp -r .next/static .next/standalone/.next/static
+        - run: cp -r data .next/standalone/data
     props:
       region: ${vars.region}
       service: ${vars.service}
       functionName: web
       description: Next.js Web 应用
-      runtime: custom.debian10
+      runtime: custom.debian12
       timeout: 300
       cpu: 1
       memorySize: 2048
       diskSize: 512
       internetAccess: true
       instanceConcurrency: 10
+      layers:
+        - acs:fc:${vars.region}:official:layers/Nodejs22/versions/1
       customRuntimeConfig:
         command:
-          - pnpm start -- --hostname 0.0.0.0 --port 9000
+          - node
+          - server.js
+        port: 9000
       environmentVariables:
         NODE_ENV: production
+        HOSTNAME: 0.0.0.0
+        PORT: "9000"
+        PATH: /opt/nodejs22/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         VOLC_API_KEY: ${env(VOLC_API_KEY)}
-      code: ./
+      code: .next/standalone
       triggers:
         - triggerName: httpTrigger
           triggerType: http

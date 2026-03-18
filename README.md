@@ -214,10 +214,10 @@ s deploy
 
 模板遵循 FC 规范，已包含：
 
-- `runtime: custom.debian10`
+- `runtime: nodejs20`
 - HTTP Trigger（匿名访问）
 - `pre-deploy` 自动执行 `pnpm install` + `pnpm build`
-- 函数启动命令：`pnpm start -- --hostname 0.0.0.0 --port 9000`
+- 函数入口：`handler: server.handler`
 
 ### 8.3 需要你修改的配置
 
