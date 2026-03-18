@@ -9,6 +9,8 @@
 
 技术栈：Next.js App Router + AI SDK v6 + VolcEngine(OpenAI 兼容) + LanceDB + libSQL。
 
+前端现已支持通过 `NEXT_PUBLIC_API_URL` 指向独立后端地址：不配置时默认走当前 Next.js 的同源 `/api/*`，配置后前端会直接请求该后端，从而可以将 UI 与后端服务拆开独立部署与扩容。
+
 ---
 
 ## 1. 架构总览
@@ -172,6 +174,7 @@
 
 可选：
 
+- `NEXT_PUBLIC_API_URL`（前后端分离部署时填写后端基础地址，例如 `https://api.example.com`）
 - `VOLC_ANSWER_MODEL`
 - `VOLC_VISION_MODEL`
 - `VOLC_ANALYZE_TEXT_MODEL`
@@ -186,6 +189,16 @@
 pnpm install
 pnpm dev
 ```
+
+如果前后端一起运行，可不配置 `NEXT_PUBLIC_API_URL`，前端会继续请求当前站点的 `/api/*`。
+
+如果要拆分部署：
+
+```bash
+NEXT_PUBLIC_API_URL=https://your-backend.example.com pnpm dev
+```
+
+这样前端会把 `/api/chat`、`/api/threads` 等请求直接发往独立后端，后端即可单独做水平扩容。
 
 生产构建：
 

@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import type { UIMessage } from "ai"
+import { getApiUrl } from "@/lib/api-url"
 import ChatMessage from "./ChatMessage"
 import ChatInput from "./ChatInput"
 import EmptyState from "./EmptyState"
@@ -72,7 +73,7 @@ export default function ChatPanel({
   const [transport] = useState(
     () =>
       new DefaultChatTransport({
-        api: "/api/chat",
+        api: getApiUrl("/api/chat"),
         prepareSendMessagesRequest: ({ body, messages, id, trigger, messageId }) => {
           const fullBody: Record<string, unknown> = {
             ...(body || {}),
@@ -101,8 +102,7 @@ export default function ChatPanel({
   // Load saved messages on mount
   useEffect(() => {
     let cancelled = false
-    setUserMsgImages([])
-    fetch(`/api/threads/${activeId}/messages`)
+    fetch(getApiUrl(`/api/threads/${activeId}/messages`))
       .then(r => r.json())
       .then((saved: UIMessage[]) => {
         if (cancelled) return
@@ -134,7 +134,7 @@ export default function ChatPanel({
       messages.length > 0
     ) {
       const persistedMessages = withPersistedImageMeta(messages, userMsgImages) as UIMessage[]
-      fetch(`/api/threads/${activeId}/messages`, {
+      fetch(getApiUrl(`/api/threads/${activeId}/messages`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: persistedMessages }),
