@@ -34,7 +34,7 @@ resources:
         NODE_ENV: production
         PORT: "9000"
         HOSTNAME: 0.0.0.0
-        VOLC_API_KEY: "YOUR_VOLC_API_KEY_HERE"
+        VOLC_API_KEY: ${env(VOLC_API_KEY)}
       code: ./
       triggers:
         - triggerName: httpTrigger
