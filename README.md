@@ -11,6 +11,8 @@
 
 前端现已支持通过 `NEXT_PUBLIC_API_URL` 指向独立后端地址：不配置时默认走当前 Next.js 的同源 `/api/*`，配置后前端会直接请求该后端，从而可以将 UI 与后端服务拆开独立部署与扩容。
 
+同时，线程级请求会自动附带 `x-thread-affinity` 请求头，值为当前 `threadId`。独立后端前的网关/负载均衡层可以基于这个 key 做一致性哈希，把同一个聊天线程稳定路由到同一个后端实例。
+
 ---
 
 ## 1. 架构总览
@@ -153,7 +155,12 @@
 - 批量 embedding（`searchVectorsBatch`）。
 - 缓存 TTL + 最大容量淘汰。
 
-3. 分析工具降时延
+3. 会话亲和路由 key
+- 前端对线程相关请求自动发送 `x-thread-affinity: <threadId>`。
+- `POST /api/chat` body 同时带上 `threadId`，便于后端日志、路由和排障。
+- 适合在网关/负载均衡层按 `threadId` 做一致性哈希，保证同一对话优先落到同一实例。
+
+4. 分析工具降时延
 - 文本/图片分模型。
 - 降低分析 token 上限。
 - analyze 超时降级。
@@ -163,6 +170,8 @@
 1. 在 `app/api/chat/route.ts` 增加分段耗时埋点（analyze/retrieve/answer first token）。
 2. 会话窗口裁剪（长会话减少上下文 token）。
 3. 对高频 query 引入持久化缓存（Redis/SQLite 预计算）。
+
+> 注意：水平扩容时，正确性仍应依赖共享存储（数据库/缓存/对象存储），不能只依赖实例内存。`x-thread-affinity` 主要用于提升流式会话、热缓存和同线程命中率，而不是作为唯一状态来源。
 
 ---
 
@@ -199,6 +208,12 @@ NEXT_PUBLIC_API_URL=https://your-backend.example.com pnpm dev
 ```
 
 这样前端会把 `/api/chat`、`/api/threads` 等请求直接发往独立后端，后端即可单独做水平扩容。
+
+如果你在云函数或网关前做水平扩容，建议：
+
+1. 后端实例保持无状态，线程/消息落共享存储。
+2. 网关或负载均衡层读取 `x-thread-affinity`，按该值做一致性哈希或粘性路由。
+3. 仅对线程级请求启用亲和；线程列表这类全局请求可正常走普通负载均衡。
 
 生产构建：
 

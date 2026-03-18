@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import type { UIMessage } from "ai"
-import { getApiUrl } from "@/lib/api-url"
+import { getApiUrl, withThreadAffinity } from "@/lib/api-url"
 import ChatMessage from "./ChatMessage"
 import ChatInput from "./ChatInput"
 import EmptyState from "./EmptyState"
@@ -74,10 +74,11 @@ export default function ChatPanel({
     () =>
       new DefaultChatTransport({
         api: getApiUrl("/api/chat"),
-        prepareSendMessagesRequest: ({ body, messages, id, trigger, messageId }) => {
+        prepareSendMessagesRequest: ({ body, headers, messages, id, trigger, messageId }) => {
           const fullBody: Record<string, unknown> = {
             ...(body || {}),
             id,
+            threadId: activeId,
             messages,
             trigger,
             messageId,
@@ -87,7 +88,15 @@ export default function ChatPanel({
             pendingImage.b64 = ""
             pendingImage.preview = ""
           }
-          return { body: fullBody }
+          return {
+            body: fullBody,
+            headers: withThreadAffinity(headers, activeId),
+          }
+        },
+        prepareReconnectToStreamRequest: ({ headers }) => {
+          return {
+            headers: withThreadAffinity(headers, activeId),
+          }
         },
       })
   )
@@ -102,7 +111,9 @@ export default function ChatPanel({
   // Load saved messages on mount
   useEffect(() => {
     let cancelled = false
-    fetch(getApiUrl(`/api/threads/${activeId}/messages`))
+    fetch(getApiUrl(`/api/threads/${activeId}/messages`), {
+      headers: withThreadAffinity(undefined, activeId),
+    })
       .then(r => r.json())
       .then((saved: UIMessage[]) => {
         if (cancelled) return
@@ -136,7 +147,7 @@ export default function ChatPanel({
       const persistedMessages = withPersistedImageMeta(messages, userMsgImages) as UIMessage[]
       fetch(getApiUrl(`/api/threads/${activeId}/messages`), {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: withThreadAffinity({ "Content-Type": "application/json" }, activeId),
         body: JSON.stringify({ messages: persistedMessages }),
       }).catch(() => {})
     }

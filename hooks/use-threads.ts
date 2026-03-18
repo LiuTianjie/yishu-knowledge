@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Thread } from "@/types";
-import { getApiUrl } from "@/lib/api-url";
+import { getApiUrl, withThreadAffinity } from "@/lib/api-url";
 
 export function useThreads() {
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -53,7 +53,10 @@ export function useThreads() {
 
   const deleteThread = useCallback(
     async (id: string) => {
-      await fetch(getApiUrl(`/api/threads/${id}`), { method: "DELETE" });
+      await fetch(getApiUrl(`/api/threads/${id}`), {
+        method: "DELETE",
+        headers: withThreadAffinity(undefined, id),
+      });
       setThreads((prev) => {
         const updated = prev.filter((t) => t.id !== id);
         if (activeId === id) {
@@ -88,7 +91,7 @@ export function useThreads() {
       );
       await fetch(getApiUrl(`/api/threads/${activeId}`), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: withThreadAffinity({ "Content-Type": "application/json" }, activeId),
         body: JSON.stringify({ title }),
       });
     },
