@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import { useThreads } from "@/hooks/use-threads"
+import { getThreadAffinityKey, hasExternalApiBase } from "@/lib/api-url"
 import Sidebar from "./Sidebar"
 import ChatPanel from "./ChatPanel"
 
@@ -17,6 +18,7 @@ export default function ChatLayout() {
   } = useThreads()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const affinityKey = getThreadAffinityKey(activeId)
 
   if (loading) {
     return (
@@ -66,9 +68,16 @@ export default function ChatLayout() {
             数
           </div>
 
-          <h1 className="flex-1 text-base font-semibold text-gray-800 truncate min-w-0">
-            {activeThread?.title || "一数知识问答"}
-          </h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-semibold text-gray-800 truncate">
+              {activeThread?.title || "一数知识问答"}
+            </h1>
+            {hasExternalApiBase && affinityKey && (
+              <p className="text-[11px] text-blue-500 truncate mt-0.5">
+                后端直连 · 会话亲和键 {affinityKey}
+              </p>
+            )}
+          </div>
 
           {/* New chat shortcut on mobile */}
           <button

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Thread } from "@/types";
+import { getApiUrl, withThreadAffinity } from "@/lib/api-url";
 
 export function useThreads() {
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -15,7 +16,7 @@ export function useThreads() {
     if (initialized.current) return;
     initialized.current = true;
 
-    fetch("/api/threads")
+    fetch(getApiUrl("/api/threads"))
       .then((r) => r.json())
       .then((data: Thread[]) => {
         if (data.length > 0) {
@@ -23,7 +24,7 @@ export function useThreads() {
           setActiveId(data[0].id);
         } else {
           // No threads → auto-create one
-          return fetch("/api/threads", {
+          return fetch(getApiUrl("/api/threads"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title: "新对话" }),
@@ -39,7 +40,7 @@ export function useThreads() {
   }, []);
 
   const createThread = useCallback(async () => {
-    const res = await fetch("/api/threads", {
+    const res = await fetch(getApiUrl("/api/threads"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "新对话" }),
@@ -52,7 +53,10 @@ export function useThreads() {
 
   const deleteThread = useCallback(
     async (id: string) => {
-      await fetch(`/api/threads/${id}`, { method: "DELETE" });
+      await fetch(getApiUrl(`/api/threads/${id}`), {
+        method: "DELETE",
+        headers: withThreadAffinity(undefined, id),
+      });
       setThreads((prev) => {
         const updated = prev.filter((t) => t.id !== id);
         if (activeId === id) {
@@ -60,7 +64,7 @@ export function useThreads() {
             setActiveId(updated[0].id);
           } else {
             // Create a new thread if all deleted
-            fetch("/api/threads", {
+            fetch(getApiUrl("/api/threads"), {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ title: "新对话" }),
@@ -85,9 +89,9 @@ export function useThreads() {
       setThreads((prev) =>
         prev.map((t) => (t.id === activeId ? { ...t, title } : t)),
       );
-      await fetch(`/api/threads/${activeId}`, {
+      await fetch(getApiUrl(`/api/threads/${activeId}`), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: withThreadAffinity({ "Content-Type": "application/json" }, activeId),
         body: JSON.stringify({ title }),
       });
     },
